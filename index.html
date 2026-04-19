@@ -663,20 +663,41 @@ function updateStats() {
 }
 
 // ── CSV 내보내기 ──────────────────────────────────────
-function exportCSV() {
-  if (!items.length) return showToast('내보낼 데이터가 없습니다.', true);
-  const header = ['식품명','카테고리','입고일','소비기한','수량','단위','보관장소','최소재고','상태'];
+function makeCSVBlob() {
+  const header = ['식품명','카테고리','입고일','소비기한','수량','단위','보관장소','상태'];
   const rows = items.map(i => [
-    i.name, i.cat, i.inDate, i.exp, i.qty, i.unit, i.loc, i.minQ, statusOf(i)
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
-  const bom = '\uFEFF';
-  const csv = bom + [header.join(','), ...rows].join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = `FoodSaver_${today()}.csv`;
+    i.name, i.cat, i.inDate, i.exp, i.qty, i.unit, i.loc, statusOf(i)
+  ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv = '\uFEFF' + [header.join(','), ...rows].join('\r\n');
+  return new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+}
+
+async function exportCSV() {
+  if (!items.length) return showToast('내보낼 데이터가 없습니다.', true);
+  const blob = makeCSVBlob();
+  const fileName = `FoodSaver_${today()}.csv`;
+
+  // 📱 스마트폰: Web Share API로 카카오톡·메일 등 직접 공유
+  if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'text/csv' })] })) {
+    try {
+      await navigator.share({
+        title: 'FoodSaver 재고 목록',
+        text: `${today()} 기준 재고 데이터입니다.`,
+        files: [new File([blob], fileName, { type: 'text/csv' })]
+      });
+      showToast('공유 완료!');
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return; // 사용자가 취소
+    }
+  }
+
+  // 💻 PC: 다운로드 폴더에 저장
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
   a.click(); URL.revokeObjectURL(url);
-  showToast('CSV 내보내기 완료!');
+  showToast('CSV 다운로드 완료!');
 }
 
 // ── 모달 ──────────────────────────────────────────────

@@ -21,11 +21,11 @@
     --warning: #ffa502;
     --safe: #2ed573;
     --info: #1e90ff;
-    --expired: #747d8c;
+    --expired: #a0aab4;
     --glass: rgba(255,255,255,0.12);
     --glass-border: rgba(255,255,255,0.25);
-    --text: #f1f2f6;
-    --text-muted: rgba(241,242,246,0.65);
+    --text: #ffffff;
+    --text-muted: rgba(255,255,255,0.80);
     --shadow: 0 8px 32px rgba(0,0,0,0.35);
   }
 
@@ -262,15 +262,15 @@
     .form-grid { grid-template-columns: 1fr 1fr; }
     table, thead, tbody, th, td, tr { display: block; }
     thead { display: none; }
-    tr { border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; margin-bottom: 10px; padding: 10px 12px; }
+    tr { border: 1px solid rgba(255,255,255,0.22); border-radius: 12px; margin-bottom: 10px; padding: 10px 12px; background: rgba(255,255,255,0.06); }
     tr.row-danger  { background: rgba(255,71,87,0.13); }
     tr.row-warning { background: rgba(255,165,2,0.10); }
     tr.row-expired { background: rgba(116,125,140,0.12); }
     td { border: none; padding: 4px 0; display: flex; align-items: center; gap: 8px; }
     td::before {
       content: attr(data-label);
-      font-size: .67rem; color: var(--text-muted); text-transform: uppercase;
-      min-width: 72px; flex-shrink: 0;
+      font-size: .67rem; color: rgba(255,255,255,0.60); text-transform: uppercase;
+      min-width: 72px; flex-shrink: 0; font-weight: 600; letter-spacing: .3px;
     }
   }
   @media (max-width: 480px) {

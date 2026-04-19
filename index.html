@@ -360,7 +360,13 @@
       </div>
       <div class="field">
         <label>보관 장소</label>
-        <input id="f-loc" type="text" placeholder="예: 냉장고 2단">
+        <select id="f-loc">
+          <option value="">선택</option>
+          <option>냉동고(주방)</option>
+          <option>냉동고(방)</option>
+          <option>냉장고</option>
+          <option>실내</option>
+        </select>
       </div>
     </div>
     <button class="btn-add" onclick="addItem()">
@@ -494,7 +500,8 @@ function addItem() {
 }
 
 function clearForm() {
-  ['f-name','f-loc'].forEach(id => $(id).value = '');
+  $('f-name').value = '';
+  $('f-loc').value  = '';
   $('f-cat').value = '';
   $('f-in').value  = today();
   $('f-exp').value = '';

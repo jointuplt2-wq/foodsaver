@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="FoodSaver">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -277,6 +278,30 @@
     .form-grid { grid-template-columns: 1fr; }
     .logo h1 { font-size: 1.2rem; }
   }
+
+  /* ── 탭 뷰 ── */
+  .view-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .view-tab {
+    padding: 7px 18px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: transparent; color: var(--text-muted);
+    font-size: .82rem; cursor: pointer; transition: all .2s;
+  }
+  .view-tab.active { background: var(--safe); color: #0f0c29; border-color: var(--safe); font-weight: 700; }
+
+  /* ── 통계 패널 ── */
+  .stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+  .stats-charts  { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }
+  .chart-box { padding: 18px; background: rgba(255,255,255,0.06); border-radius: 12px; text-align: center; }
+  .chart-box h4 { font-size: .82rem; color: var(--text-muted); margin-bottom: 12px; }
+  .chart-box canvas { max-height: 200px; }
+  .expire-list { list-style: none; }
+  .expire-list li { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: .85rem; display: flex; justify-content: space-between; align-items: center; }
+  .expire-list li:last-child { border-bottom: none; }
+
+  @media (max-width: 600px) {
+    .stats-charts { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -378,6 +403,18 @@
   <div class="glass form-wrap">
     <div class="section-title"><i class="fa-solid fa-list"></i> 재고 리스트</div>
 
+    <!-- 탭 버튼 -->
+    <div class="view-tabs">
+      <button class="view-tab active" id="tab-list" onclick="showTab('list')">
+        <i class="fa-solid fa-list"></i> 재고 목록
+      </button>
+      <button class="view-tab" id="tab-stats" onclick="showTab('stats')">
+        <i class="fa-solid fa-chart-pie"></i> 통계
+      </button>
+    </div>
+
+    <!-- 재고 목록 패널 -->
+    <div id="panel-list">
     <div class="toolbar">
       <div class="search-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
@@ -414,6 +451,36 @@
         등록된 식품이 없습니다.<br>위 폼에서 식품을 등록해 주세요.
       </div>
     </div>
+    </div><!-- /#panel-list -->
+
+    <!-- 통계 패널 -->
+    <div id="panel-stats" style="display:none">
+      <div class="stats-summary">
+        <div class="stat-card glass">
+          <div class="icon">📦</div>
+          <div class="num" id="s-total">0</div>
+          <div class="lbl">총 품목 수</div>
+        </div>
+        <div class="stat-card glass">
+          <div class="icon">🔢</div>
+          <div class="num" id="s-qty">0</div>
+          <div class="lbl">총 수량</div>
+        </div>
+      </div>
+      <div class="stats-charts">
+        <div class="chart-box">
+          <h4>카테고리별 분포</h4>
+          <canvas id="chart-cat"></canvas>
+        </div>
+        <div class="chart-box">
+          <h4>상태별 분포</h4>
+          <canvas id="chart-status"></canvas>
+        </div>
+      </div>
+      <div class="section-title"><i class="fa-solid fa-calendar-xmark"></i> 이달 만료 예정</div>
+      <ul class="expire-list" id="expire-list"></ul>
+    </div><!-- /#panel-stats -->
+
   </div>
 
 </div><!-- /.app -->
@@ -640,6 +707,7 @@ function render() {
   });
 
   updateStats();
+  if ($('panel-stats') && $('panel-stats').style.display !== 'none') renderStats();
 }
 
 function statusLabel(item) {
@@ -772,6 +840,74 @@ function importCSV(input) {
     }
   };
   reader.readAsText(file, 'UTF-8');
+}
+
+// ── 탭 전환 ──────────────────────────────────────────
+let chartCat = null, chartStatus = null;
+
+function showTab(tab) {
+  $('panel-list').style.display  = tab === 'list'  ? '' : 'none';
+  $('panel-stats').style.display = tab === 'stats' ? '' : 'none';
+  $('tab-list').classList.toggle('active',  tab === 'list');
+  $('tab-stats').classList.toggle('active', tab === 'stats');
+  if (tab === 'stats') renderStats();
+}
+
+// ── 통계 렌더 ─────────────────────────────────────────
+function renderStats() {
+  $('s-total').textContent = items.length;
+  $('s-qty').textContent   = items.reduce((s, i) => s + i.qty, 0);
+
+  const cats = ['냉장','냉동','상온'];
+  const catCounts = cats.map(c => items.filter(i => i.cat === c).length);
+
+  const statuses = ['safe','warning','danger','expired'];
+  const statusLabels = ['정상','주의','위험','만료'];
+  const statusCounts = statuses.map(s => items.filter(i => statusOf(i) === s).length);
+
+  const chartOpts = {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#fff', font: { size: 11 } } } }
+  };
+
+  if (chartCat) chartCat.destroy();
+  chartCat = new Chart($('chart-cat'), {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{ data: catCounts,
+        backgroundColor: ['rgba(30,144,255,0.7)','rgba(116,125,255,0.7)','rgba(255,165,2,0.7)'],
+        borderColor: ['#1e90ff','#7475ff','#ffa502'], borderWidth: 1.5
+      }]
+    },
+    options: { ...chartOpts, cutout: '60%' }
+  });
+
+  if (chartStatus) chartStatus.destroy();
+  chartStatus = new Chart($('chart-status'), {
+    type: 'doughnut',
+    data: {
+      labels: statusLabels,
+      datasets: [{ data: statusCounts,
+        backgroundColor: ['rgba(46,213,115,0.7)','rgba(255,165,2,0.7)','rgba(255,71,87,0.7)','rgba(116,125,140,0.6)'],
+        borderColor: ['#2ed573','#ffa502','#ff4757','#747d8c'], borderWidth: 1.5
+      }]
+    },
+    options: { ...chartOpts, cutout: '60%' }
+  });
+
+  const thisMonth = items
+    .filter(i => { const d = diffDays(i.exp); return d >= 0 && d <= 31; })
+    .sort((a, b) => a.exp.localeCompare(b.exp));
+
+  const ul = $('expire-list');
+  ul.innerHTML = thisMonth.length
+    ? thisMonth.map(i => `
+        <li>
+          <span><span class="cat-chip cat-${esc(i.cat)}">${esc(i.cat)}</span> ${esc(i.name)}</span>
+          <span>${badgeHtml(i)}</span>
+        </li>`).join('')
+    : '<li style="color:var(--text-muted);justify-content:center">이달 만료 예정 품목이 없습니다.</li>';
 }
 
 function init() {

@@ -383,16 +383,6 @@
           <option>kg</option><option>L</option><option>묶음</option>
         </select>
       </div>
-      <div class="field">
-        <label>보관 장소</label>
-        <select id="f-loc">
-          <option value="">선택</option>
-          <option>냉동고(주방)</option>
-          <option>냉동고(방)</option>
-          <option>냉장고</option>
-          <option>실내</option>
-        </select>
-      </div>
     </div>
     <button class="btn-add" onclick="addItem()">
       <i class="fa-solid fa-circle-plus"></i> 등록하기
@@ -418,7 +408,7 @@
     <div class="toolbar">
       <div class="search-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input id="search" type="text" placeholder="식품명 또는 보관 장소 검색..." oninput="render()">
+        <input id="search" type="text" placeholder="식품명 검색..." oninput="render()">
       </div>
       <div class="cat-tabs" id="cat-tabs">
         <button class="cat-tab active" data-cat="전체" onclick="setCat(this)">전체</button>
@@ -439,7 +429,6 @@
             <th>소비기한</th>
             <th>D-day</th>
             <th>수량</th>
-            <th>보관 장소</th>
             <th>상태</th>
             <th></th>
           </tr>
@@ -575,7 +564,6 @@ function addItem() {
   const exp   = $('f-exp').value;
   const qty   = parseInt($('f-qty').value, 10);
   const unit  = $('f-unit').value;
-  const loc   = $('f-loc').value.trim();
 
   if (!name)   return showToast('식품명을 입력해 주세요.', true);
   if (!cat)    return showToast('카테고리를 선택해 주세요.', true);
@@ -584,7 +572,7 @@ function addItem() {
   if (exp < inDate) return showToast('소비기한이 입고일보다 이전입니다.', true);
   if (isNaN(qty) || qty < 1) return showToast('수량은 1 이상이어야 합니다.', true);
 
-  items.push({ id: uid(), name, cat, inDate, exp, qty, unit, loc });
+  items.push({ id: uid(), name, cat, inDate, exp, qty, unit });
   save();
   render();
   clearForm();
@@ -593,7 +581,6 @@ function addItem() {
 
 function clearForm() {
   $('f-name').value = '';
-  $('f-loc').value  = '';
   $('f-cat').value = '';
   $('f-in').value  = today();
   $('f-exp').value = '';
@@ -646,7 +633,7 @@ function filtered() {
   const q = $('search').value.trim().toLowerCase();
   return items
     .filter(i => activeCat === '전체' || i.cat === activeCat)
-    .filter(i => !q || i.name.toLowerCase().includes(q) || i.loc.toLowerCase().includes(q))
+    .filter(i => !q || i.name.toLowerCase().includes(q))
     .sort((a, b) => a.exp.localeCompare(b.exp));
 }
 
@@ -699,7 +686,6 @@ function render() {
           <button class="qty-btn plus"  onclick="changeQty('${item.id}', 1)">+</button>
         </div>
       </td>
-      <td data-label="보관 장소">${esc(item.loc) || '—'}</td>
       <td data-label="상태">${statusLabel(item)}</td>
       <td><button class="btn-del" onclick="confirmDelete('${item.id}')"><i class="fa-solid fa-trash"></i></button></td>
     `;
@@ -734,7 +720,7 @@ function updateStats() {
 function makeCSVBlob() {
   const header = ['식품명','카테고리','입고일','소비기한','수량','단위','보관장소','상태'];
   const rows = items.map(i => [
-    i.name, i.cat, i.inDate, i.exp, i.qty, i.unit, i.loc, statusOf(i)
+    i.name, i.cat, i.inDate, i.exp, i.qty, i.unit, statusOf(i)
   ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(','));
   const csv = '\uFEFF' + [header.join(','), ...rows].join('\r\n');
   return new Blob([csv], { type: 'text/csv;charset=utf-8;' });

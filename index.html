@@ -684,13 +684,33 @@ async function gistUpload() {
   }
 }
 
+async function findGistIdAuto(token) {
+  // 저장된 ID가 있으면 바로 반환
+  const saved = $('gist-id-input').value.trim() || localStorage.getItem(GIST_ID_KEY) || '';
+  if (saved) return saved;
+  // 없으면 Gist 목록에서 foodsaver-data.json 파일 탐색
+  gistSetStatus('🔍 기존 Gist 탐색 중…');
+  const res = await fetch('https://api.github.com/gists?per_page=100', {
+    headers: { Authorization: 'token ' + token }
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const list = await res.json();
+  const found = list.find(g => g.files && g.files[GIST_FILE]);
+  if (found) {
+    localStorage.setItem(GIST_ID_KEY, found.id);
+    $('gist-id-input').value = found.id;
+    return found.id;
+  }
+  return '';
+}
+
 async function gistDownload() {
   const token  = $('gist-token').value.trim();
-  const gistId = $('gist-id-input').value.trim();
   if (!token)  return gistSetStatus('Token을 입력해 주세요.', false);
-  if (!gistId) return gistSetStatus('Gist ID가 없습니다. 먼저 업로드해 주세요.', false);
   gistSetStatus('다운로드 중…');
   try {
+    const gistId = await findGistIdAuto(token);
+    if (!gistId) return gistSetStatus('❌ Gist를 찾지 못했습니다. 태블릿에서 먼저 업로드해 주세요.', false);
     const res = await fetch('https://api.github.com/gists/' + gistId, {
       headers: { Authorization: 'token ' + token }
     });

@@ -72,38 +72,6 @@
   .today { font-size: .8rem; color: var(--text-muted); text-align: right; }
   .today strong { color: var(--text); font-size: .95rem; }
 
-  /* ── Gist 동기화 ── */
-  .btn-gist {
-    padding: 8px 13px; border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(255,255,255,0.08); color: var(--text);
-    font-size: .8rem; cursor: pointer; transition: all .2s;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .btn-gist:hover { background: rgba(255,255,255,0.16); border-color: var(--info); }
-  .btn-gist.synced { border-color: var(--safe); color: var(--safe); }
-  .gist-field { margin-top: 12px; }
-  .gist-field label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
-  .gist-input {
-    width: 100%; background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 8px; padding: 9px 11px;
-    color: var(--text); font-size: .85rem;
-    outline: none; transition: border-color .2s;
-  }
-  .gist-input:focus { border-color: var(--info); }
-  .gist-actions { display: flex; gap: 10px; margin-top: 16px; }
-  .btn-gist-up, .btn-gist-dl {
-    flex: 1; padding: 10px; border: none; border-radius: 10px;
-    font-size: .88rem; font-weight: 600; cursor: pointer;
-    transition: opacity .2s, transform .15s;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-  }
-  .btn-gist-up { background: linear-gradient(90deg,#1e90ff,#48c6ef); color:#fff; }
-  .btn-gist-dl { background: linear-gradient(90deg,#a18cd1,#fbc2eb); color:#fff; }
-  .btn-gist-up:hover, .btn-gist-dl:hover { opacity:.88; transform:translateY(-1px); }
-  .gist-status { font-size: .78rem; text-align: center; margin-top: 10px; min-height: 18px; color: var(--text-muted); }
-
   /* ── 글래스 카드 ── */
   .glass {
     background: var(--glass);
@@ -352,9 +320,6 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
-      <button class="btn-gist" id="btn-gist" onclick="openGist()" title="GitHub Gist 동기화">
-        <i class="fa-brands fa-github"></i> Gist 동기화
-      </button>
       <div class="today">
         기준일<br>
         <strong id="today-display"></strong>
@@ -548,45 +513,6 @@
   </div>
 </div>
 
-<!-- Gist 동기화 모달 -->
-<div class="modal-bg" id="gist-modal" style="display:none" onclick="if(event.target===this)closeGist()">
-  <div class="modal">
-    <h3><i class="fa-brands fa-github" style="margin-right:7px"></i>GitHub Gist 동기화</h3>
-    <p style="margin-top:8px;font-size:.83rem;color:var(--text-muted)">
-      GitHub Personal Access Token(gist 권한)을 입력하면<br>
-      어느 기기에서든 데이터를 동기화할 수 있습니다.
-    </p>
-    <div class="gist-field">
-      <label>GitHub Token &nbsp;
-        <a href="https://github.com/settings/tokens/new?scopes=gist&description=FoodSaver" target="_blank"
-           style="color:var(--info);font-size:.72rem;text-decoration:none">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> 토큰 발급받기
-        </a>
-      </label>
-      <input type="password" id="gist-token" class="gist-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
-    </div>
-    <div class="gist-field">
-      <label>Gist ID <span style="font-size:.7rem;color:var(--text-muted)">(첫 업로드 후 자동 저장)</span></label>
-      <input type="text" id="gist-id-input" class="gist-input" placeholder="자동 생성됩니다" autocomplete="off">
-    </div>
-    <div class="gist-actions">
-      <button class="btn-gist-up" onclick="gistUpload()">
-        <i class="fa-solid fa-cloud-arrow-up"></i> 업로드
-      </button>
-      <button class="btn-gist-dl" onclick="gistDownload()">
-        <i class="fa-solid fa-cloud-arrow-down"></i> 다운로드
-      </button>
-    </div>
-    <div class="gist-status" id="gist-status"></div>
-    <div class="modal-btns" style="margin-top:16px">
-      <button class="btn-cancel" onclick="gistReset()" style="color:var(--danger);border-color:rgba(255,71,87,.4)">
-        <i class="fa-solid fa-rotate-left"></i> 초기화
-      </button>
-      <button class="btn-cancel" onclick="closeGist()">닫기</button>
-    </div>
-  </div>
-</div>
-
 <!-- 토스트 -->
 <div class="toast" id="toast"></div>
 
@@ -630,121 +556,6 @@ function save() {
 function load() {
   try { items = JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
   catch { items = []; }
-}
-
-// ── GitHub Gist 동기화 ────────────────────────────────
-const GIST_TOKEN_KEY = 'foodsaver_gist_token';
-const GIST_ID_KEY    = 'foodsaver_gist_id';
-const GIST_FILE      = 'foodsaver-data.json';
-
-function openGist() {
-  $('gist-token').value    = localStorage.getItem(GIST_TOKEN_KEY) || '';
-  $('gist-id-input').value = localStorage.getItem(GIST_ID_KEY) || '';
-  $('gist-status').textContent = '';
-  $('gist-modal').style.display = 'flex';
-}
-
-function closeGist() {
-  $('gist-modal').style.display = 'none';
-}
-
-function gistSetStatus(msg, ok) {
-  const el = $('gist-status');
-  el.textContent = msg;
-  el.style.color = ok === false ? 'var(--danger)' : ok === true ? 'var(--safe)' : 'var(--text-muted)';
-}
-
-async function gistUpload() {
-  const token  = $('gist-token').value.trim();
-  const gistId = $('gist-id-input').value.trim();
-  if (!token) return gistSetStatus('Token을 입력해 주세요.', false);
-  gistSetStatus('업로드 중…');
-  try {
-    const payload = JSON.stringify({
-      description: 'FoodSaver 재고 데이터',
-      public: false,
-      files: { [GIST_FILE]: { content: JSON.stringify(items, null, 2) } }
-    });
-    const url    = gistId ? 'https://api.github.com/gists/' + gistId : 'https://api.github.com/gists';
-    const method = gistId ? 'PATCH' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: { Authorization: 'token ' + token, 'Content-Type': 'application/json' },
-      body: payload
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    localStorage.setItem(GIST_TOKEN_KEY, token);
-    localStorage.setItem(GIST_ID_KEY, data.id);
-    $('gist-id-input').value = data.id;
-    updateGistBtn(true);
-    gistSetStatus('✅ 업로드 완료 (' + items.length + '개 항목) · ' + new Date().toLocaleTimeString(), true);
-  } catch(e) {
-    gistSetStatus('❌ 업로드 실패: ' + e.message, false);
-  }
-}
-
-async function findGistIdAuto(token) {
-  // 저장된 ID가 있으면 바로 반환
-  const saved = $('gist-id-input').value.trim() || localStorage.getItem(GIST_ID_KEY) || '';
-  if (saved) return saved;
-  // 없으면 Gist 목록에서 foodsaver-data.json 파일 탐색
-  gistSetStatus('🔍 기존 Gist 탐색 중…');
-  const res = await fetch('https://api.github.com/gists?per_page=100', {
-    headers: { Authorization: 'token ' + token }
-  });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const list = await res.json();
-  const found = list.find(g => g.files && g.files[GIST_FILE]);
-  if (found) {
-    localStorage.setItem(GIST_ID_KEY, found.id);
-    $('gist-id-input').value = found.id;
-    return found.id;
-  }
-  return '';
-}
-
-async function gistDownload() {
-  const token  = $('gist-token').value.trim();
-  if (!token)  return gistSetStatus('Token을 입력해 주세요.', false);
-  gistSetStatus('다운로드 중…');
-  try {
-    const gistId = await findGistIdAuto(token);
-    if (!gistId) return gistSetStatus('❌ Gist를 찾지 못했습니다. 태블릿에서 먼저 업로드해 주세요.', false);
-    const res = await fetch('https://api.github.com/gists/' + gistId, {
-      headers: { Authorization: 'token ' + token }
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data    = await res.json();
-    const content = data.files[GIST_FILE] && data.files[GIST_FILE].content;
-    if (!content) throw new Error('파일을 찾을 수 없습니다.');
-    const loaded = JSON.parse(content);
-    if (!Array.isArray(loaded)) throw new Error('데이터 형식이 올바르지 않습니다.');
-    items = loaded;
-    save();
-    render();
-    localStorage.setItem(GIST_TOKEN_KEY, token);
-    localStorage.setItem(GIST_ID_KEY, gistId);
-    updateGistBtn(true);
-    gistSetStatus('✅ 다운로드 완료 (' + items.length + '개 항목) · ' + new Date().toLocaleTimeString(), true);
-  } catch(e) {
-    gistSetStatus('❌ 다운로드 실패: ' + e.message, false);
-  }
-}
-
-function updateGistBtn(synced) {
-  const btn = $('btn-gist');
-  if (synced) btn.classList.add('synced');
-  else btn.classList.remove('synced');
-}
-
-function gistReset() {
-  localStorage.removeItem(GIST_TOKEN_KEY);
-  localStorage.removeItem(GIST_ID_KEY);
-  $('gist-token').value    = '';
-  $('gist-id-input').value = '';
-  updateGistBtn(false);
-  gistSetStatus('✅ 초기화 완료. 새 토큰과 Gist ID를 입력하세요.', true);
 }
 
 // ── 등록 ──────────────────────────────────────────────
@@ -1097,7 +908,6 @@ function init() {
 
   load();
   render();
-  if (localStorage.getItem(GIST_ID_KEY)) updateGistBtn(true);
 }
 
 init();

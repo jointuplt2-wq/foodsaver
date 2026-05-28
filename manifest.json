@@ -1,7 +1,7 @@
 {
-  "name": "FoodSaver — 식품 위생 재고 관리",
-  "short_name": "FoodSaver",
-  "description": "식품 소비기한 및 재고 관리 앱",
+  "name": "Inventory Check System",
+  "short_name": "ICS",
+  "description": "재고 관리 앱",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
